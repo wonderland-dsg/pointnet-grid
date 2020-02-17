@@ -30,7 +30,7 @@ def get_model(point_cloud, is_training, bn_decay=None, gridcell_num=500, per_num
                                 use_xavier=False,
                                 stddev=0.1,
                                 wd=0.0)
-    net = tf.reshape(net, [-1, gridcell_num, per_num]) #* tf.complex(c, .0)  
+    net = tf.reshape(net, [-1, gridcell_num, per_num]) * tf.complex(c, .0)  
     net = tf.reduce_sum(net, axis=2)
     net = tf.concat([tf.real(net), tf.imag(net)], axis=1)
     net = tf.reduce_sum( tf.reshape(net, [-1, num_point, 2*gridcell_num]), axis=1)
