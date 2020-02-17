@@ -30,8 +30,10 @@ def get_model(point_cloud, is_training, bn_decay=None, gridcell_num=500, per_num
                                 use_xavier=False,
                                 stddev=0.1,
                                 wd=0.0)
-    net = tf.reshape(net, [-1, gridcell_num, per_num]) * tf.complex(c, .0)  
+    net = tf.reshape(net, [batch_size * num_point, gridcell_num, per_num]) * tf.complex(c, .0)  
     net = tf.reduce_sum(net, axis=2)
+    code = tf.reduce_mean( tf.reshape(net, [-1, num_point, gridcell_num]), axis=1)
+    end_points['code'] = code
     net = tf.concat([tf.real(net), tf.imag(net)], axis=1)
     net = tf.reduce_mean( tf.reshape(net, [-1, num_point, 2*gridcell_num]), axis=1)
 
@@ -48,13 +50,31 @@ def get_model(point_cloud, is_training, bn_decay=None, gridcell_num=500, per_num
     return net, end_points
 
 
-def get_loss(pred, label, end_points):
+def get_loss(pred, label, end_points, wb=1e-2):
     """ pred: B*NUM_CLASSES,
         label: B, """
+    code = end_points['code']
+    batch_size = label.get_shape()[0].value
+    print(label.shape, batch_size, label.get_shape()[0], code.shape)
+    codex = tf.tile( tf.expand_dims(code, axis=1), [1, batch_size, 1]) 
+    codey = tf.tile( tf.expand_dims(code, axis=0), [batch_size, 1, 1])
+    A = tf.square( tf_util._variable_on_cpu('A', [1], tf.constant_initializer(2.0)) )
+    tmp = A * tf.reduce_sum(tf.real(codex * codey), axis=-1 )
+    p_martix = tf.nn.softmax( tmp )
+    
+    #print(label.shape, batch_size)
+    labelx = tf.tile( tf.expand_dims(label, axis=1), [1, batch_size]) 
+    labely = tf.tile( tf.expand_dims(label, axis=0), [batch_size, 1])
+    error_martix =  1 - tf.cast(tf.equal(labelx, labely), tf.int32)
+    error_martix = tf.cast(error_martix, tf.float32)
+
+    loss_re = tf.reduce_mean(tf.reduce_sum( p_martix * error_martix, axis=1) )
+
     loss = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=pred, labels=label)
     classify_loss = tf.reduce_mean(loss)
     tf.summary.scalar('classify loss', classify_loss)
-    return classify_loss
+    tf.summary.scalar('kernel loss', loss_re)
+    return classify_loss + wb*loss_re
 
 
 if __name__=='__main__':
