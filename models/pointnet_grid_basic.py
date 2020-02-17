@@ -50,7 +50,7 @@ def get_model(point_cloud, is_training, bn_decay=None, gridcell_num=500, per_num
     return net, end_points
 
 
-def get_loss(pred, label, end_points, wb=1e-2):
+def get_loss(pred, label, end_points, wb=1e0):
     """ pred: B*NUM_CLASSES,
         label: B, """
     code = end_points['code']
