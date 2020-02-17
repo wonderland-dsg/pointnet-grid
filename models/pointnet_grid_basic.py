@@ -21,13 +21,13 @@ def get_model(point_cloud, is_training, bn_decay=None, gridcell_num=500, per_num
     end_points = {}
     point_cloud = tf.reshape(point_cloud, [-1, 3]) 
     net = tf_util.fully_connected(point_cloud, gridcell_num*per_num, bn=False, is_training=is_training,
-                                  scope='grid_w', bn_decay=bn_decay)
+                                  scope='grid_w', bn_decay=bn_decay, stddev=0.3, use_xavier=False)
     
     net = tf.exp(tf.complex(.0, net))
 
     c = tf_util._variable_with_weight_decay('c',
                                 shape=[gridcell_num, per_num],
-                                use_xavier=True,
+                                use_xavier=False,
                                 stddev=0.1,
                                 wd=0.0)
     net = tf.reshape(net, [-1, gridcell_num, per_num]) #* tf.complex(c, .0)  
