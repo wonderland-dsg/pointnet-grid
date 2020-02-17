@@ -55,7 +55,7 @@ def get_loss(pred, label, end_points, wb=1e-2):
         label: B, """
     code = end_points['code']
     batch_size = label.get_shape()[0].value
-    print(label.shape, batch_size, label.get_shape()[0], code.shape)
+    #print(label.shape, batch_size, label.get_shape()[0], code.shape)
     codex = tf.tile( tf.expand_dims(code, axis=1), [1, batch_size, 1]) 
     codey = tf.tile( tf.expand_dims(code, axis=0), [batch_size, 1, 1])
     A = tf.square( tf_util._variable_on_cpu('A', [1], tf.constant_initializer(2.0)) )
