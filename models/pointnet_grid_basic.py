@@ -14,32 +14,32 @@ def placeholder_inputs(batch_size, num_point):
     return pointclouds_pl, labels_pl
 
 
-def get_model(point_cloud, is_training, bn_decay=None, gridcell_num=1000):
+def get_model(point_cloud, is_training, bn_decay=None, gridcell_num=500, per_num=10):
     """ Classification PointNet, input is BxNx3, output Bx40 """
     batch_size = point_cloud.get_shape()[0].value
     num_point = point_cloud.get_shape()[1].value
     end_points = {}
     point_cloud = tf.reshape(point_cloud, [-1, 3]) 
-    net = tf_util.fully_connected(point_cloud, gridcell_num*20, bn=False, is_training=is_training,
+    net = tf_util.fully_connected(point_cloud, gridcell_num*per_num, bn=False, is_training=is_training,
                                   scope='grid_w', bn_decay=bn_decay)
     
     net = tf.exp(tf.complex(.0, net))
 
     c = tf_util._variable_with_weight_decay('c',
-                                shape=[gridcell_num, 20],
+                                shape=[gridcell_num, per_num],
                                 use_xavier=True,
                                 stddev=0.1,
                                 wd=0.0)
-    net = tf.reshape(net, [-1, gridcell_num, 20]) * tf.complex(c, .0)  
+    net = tf.reshape(net, [-1, gridcell_num, per_num]) #* tf.complex(c, .0)  
     net = tf.reduce_sum(net, axis=2)
     net = tf.concat([tf.real(net), tf.imag(net)], axis=1)
     net = tf.reduce_sum( tf.reshape(net, [-1, num_point, 2*gridcell_num]), axis=1)
 
     # MLP on global point cloud vector
     #net = tf.reshape(net, [batch_size, -1])
-    net = tf_util.fully_connected(net, 512, bn=True, is_training=is_training,
+    net = tf_util.fully_connected(net, 512, bn=False, is_training=is_training,
                                   scope='fc1', bn_decay=bn_decay)
-    net = tf_util.fully_connected(net, 256, bn=True, is_training=is_training,
+    net = tf_util.fully_connected(net, 256, bn=False, is_training=is_training,
                                   scope='fc2', bn_decay=bn_decay)
     net = tf_util.dropout(net, keep_prob=0.7, is_training=is_training,
                           scope='dp1')
